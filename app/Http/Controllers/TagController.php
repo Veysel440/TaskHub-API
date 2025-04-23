@@ -46,4 +46,11 @@ class TagController extends Controller
         $this->tagService->deleteTag($tag);
         return response()->json(null, 204);
     }
+
+    private function authorizeTag(Tag $tag): void
+    {
+        if ($tag->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
+    }
 }
