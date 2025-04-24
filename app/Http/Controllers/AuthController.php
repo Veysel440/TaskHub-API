@@ -36,15 +36,13 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (!Auth::attempt($credentials)) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+            return response()->json(['message' => 'Giriş başarısız'], 401);
         }
 
         $user = Auth::user();
-        $token = $user->createToken('api_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
+            'token' => $user->createToken('API Token')->plainTextToken,
         ]);
     }
 
