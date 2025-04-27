@@ -13,17 +13,25 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        $user = User::where('email', $request->email)->first();
 
-        $token = $user->createToken('api_token')->plainTextToken;
+        if (!$user) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+        } else {
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json(['message' => 'Şifre hatalı'], 401);
+            }
+        }
+
+        $token = $this->getOrCreateToken($user);
 
         return response()->json([
             'user' => $user,
@@ -40,16 +48,29 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-
         return response()->json([
-            'token' => $user->createToken('API Token')->plainTextToken,
+            'token' => $this->getOrCreateToken($user),
         ]);
     }
 
-
-    public function me(Request $request)
+    public function getOrCreateToken($user)
     {
-        return response()->json($request->user());
+        $tokenModel = $user->tokens()->latest('id')->first();
+
+        if ($tokenModel && $tokenModel->expires_at > now()) {
+            return $tokenModel->token;
+        }
+
+        $user->tokens()->delete();
+
+        $tokenResult = $user->createToken('api_token');
+        $token = $tokenResult->plainTextToken;
+
+        $user->tokens()->latest('id')->first()->update([
+            'expires_at' => now()->addDay(),
+        ]);
+
+        return $token;
     }
 
     public function logout(Request $request)

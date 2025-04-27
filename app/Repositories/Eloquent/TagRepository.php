@@ -32,4 +32,9 @@ class TagRepository implements TagRepositoryInterface
     {
         return $tag->delete();
     }
+
+    public function findByName(string $name): ?Tag
+    {
+        return $this->model->where('name', $name)->first();
+    }
 }
